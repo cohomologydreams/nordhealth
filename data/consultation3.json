@@ -1,0 +1,51 @@
+{
+    "patient": {
+        "name": "Luna",
+        "species": "Cat (Feline - Domestic)",
+        "breed": "Maine Coon",
+        "gender": "female",
+        "neutered": true,
+        "date_of_birth": "2021-05-15",
+        "microchip": "981000123456789",
+        "weight": "6.1 kg"
+    },
+    "consultation": {
+        "date": "2025-04-15",
+        "time": "09:20",
+        "reason": "Annual Vaccination",
+        "type": "Outpatient",
+        "clinical_notes": [
+            {
+                "type": "vaccination",
+                "note": "Patient is in good health, no visible issues.\nVaccines administered without complications.\nAdvised to monitor for signs of lethargy or swelling."
+            }
+        ],
+        "treatment_items": {
+            "procedures": [
+                {
+                    "date": "2025-04-15",
+                    "time": "09:25",
+                    "name": "Annual Health Check",
+                    "code": "chk001",
+                    "quantity": 1,
+                    "total_price": 3200,
+                    "currency": "GBP"
+                },
+                {
+                    "date": "2025-04-15",
+                    "time": "09:30",
+                    "name": "Vaccination - FVRCP",
+                    "code": "vac015",
+                    "quantity": 1,
+                    "total_price": 2800,
+                    "currency": "GBP"
+                }
+            ],
+            "medicines": [],
+            "prescriptions": [],
+            "foods": [],
+            "supplies": []
+        },
+        "diagnostics": []
+    }
+}

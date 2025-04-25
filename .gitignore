@@ -1,0 +1,4 @@
+provet/provet/__pycache__/
+provet/autoconsul/__pycache__/
+provet/autoconsul/migrations/
+provet/db.sqlite3

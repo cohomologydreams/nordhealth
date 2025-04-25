@@ -1,0 +1,212 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth bg-[#3d199a] text-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nordhealth • Discharge Note Generator</title>
+  <link rel="icon" href="{% static 'autoconsul/images/favicon.ico' %}" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body, button, input, select, textarea {
+      font-family: 'Inter', sans-serif;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Poppins', sans-serif;
+    }
+    .records-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .records-table thead {
+      background-color: var(--header-lavender);
+    }
+    .records-table th, .records-table td {
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid #D1D5DB;
+    }
+    .records-table td.font-bold {
+      font-weight: 700;
+    }
+    .records-table tr:last-child td {
+      border-bottom: none;
+    }
+    :root {
+      --header-lavender: #B39DFF;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <header class="bg-[#3d199a] shadow-sm">
+    <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="flex items-center">
+        <img src="{% static 'autoconsul/images/Provet Cloud_logo_negative_CMYK.png' %}"
+             alt="Nordhealth Logo"
+             class="h-10" />
+      </a>
+      <button id="theme-toggle" aria-label="Toggle Dark Mode" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+        <i class="fa-solid fa-moon text-xl"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-6 py-8 flex-grow">
+    <section class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+      <h1 class="text-3xl font-semibold mb-6 text-gray-900">Generate Discharge Note</h1>
+
+      {% if error %}
+        <div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+          {{ error }}
+        </div>
+      {% endif %}
+
+      <form method="post"
+            enctype="multipart/form-data"
+            action="{% url 'generate' %}"
+            class="space-y-6">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label for="file" class="block text-sm font-medium text-gray-700">
+              Upload JSON file from your disk:
+            </label>
+            <input type="file"
+                   name="file"
+                   id="file"
+                   accept=".json"
+                   class="mt-1 block w-full text-sm
+                          file:mr-4 file:py-2 file:px-4 file:rounded-lg
+                          file:border-0 file:text-sm file:font-semibold
+                          file:bg-[#fdd52a]
+                          file:text-gray-900
+                          hover:file:brightness-90" />
+          </div>
+          <div>
+            <label for="server_file" class="block text-sm font-medium text-gray-700">
+              Found samples:
+            </label>
+            <select name="server_file"
+                    id="server_file"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+              <option value="" disabled selected>— choose a file —</option>
+              {% for fname in server_files %}
+                <option value="{{ fname }}">{{ fname }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="model" class="block text-sm font-medium text-gray-700">
+              Choose LLM model:
+            </label>
+            <select name="model"
+                    id="model"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+              <option value="gpt-4o" selected>GPT-4o</option>
+              <option value="gpt-4">GPT-4</option>
+              <option value="gpt-4.1-nano">GPT-4.1-nano</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit"
+                  class="inline-flex items-center px-6 py-3
+                         bg-[#fdd52a] text-gray-900
+                         text-sm font-semibold rounded-xl shadow-md
+                         hover:brightness-90 transform transition">
+            Generate Note
+          </button>
+        </div>
+      </form>
+
+      {% if message %}
+        <p id="progress-msg" class="mt-4 text-sm text-gray-700">{{ message }}</p>
+      {% endif %}
+
+      {% if task_id %}
+        <div id="progress-{{ task_id }}" class="my-4"></div>
+        <button
+          id="refresh-btn-{{ task_id }}"
+          class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hidden"
+          onclick="window.location.reload()">
+          Refresh Results
+        </button>
+<!--         <script src="{% static 'celery_progress/progress.js' %}"></script>
+        <script>
+          new CeleryProgressBar({
+            taskId:       '{{ task_id }}',
+            barContainer: '#progress-{{ task_id }}',
+            statusUrl:    '{% url "celery_progress:task_status" task_id %}',
+            onComplete:   () => {
+              document.getElementById('refresh-btn-{{ task_id }}').classList.remove('hidden');
+              document.getElementById('progress-msg')?.remove();
+            },
+          });
+        </script> -->
+      {% endif %}
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-lg p-8">
+      <h2 class="text-2xl font-semibold mb-6 text-gray-900">Patient records</h2>
+      <div class="overflow-x-auto">
+        <table class="records-table w-full">
+          <thead>
+            <tr>
+              <th class="text-left text-xs">Patient</th>
+              <th class="text-left text-xs">Species / Breed</th>
+              <th class="text-left text-xs">Discharge Note</th>
+              <th class="text-center text-xs">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white">
+            {% for note in notes %}
+            <tr class="hover:bg-[#b39dff]/30">
+              <td class="text-sm text-gray-900 {% if forloop.first %}font-bold{% endif %}">
+                {{ note.consultation.patient.name }}
+              </td>
+              <td class="text-sm text-gray-900 {% if forloop.first %}font-bold{% endif %}">
+                {{ note.consultation.patient.species }} / {{ note.consultation.patient.breed }}
+              </td>
+              <td class="text-sm text-gray-900 {% if forloop.first %}font-bold{% endif %}">
+                {{ note.note_text|linebreaksbr }}
+              </td>
+              <td class="text-center">
+                <form method="post" action="{% url 'delete_note' note.id %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="inline-flex items-center px-4 py-2 text-sm font-medium
+                                 bg-[#3d199a] text-white rounded-full
+                                 hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600">
+                    <i class="fa-solid fa-trash mr-2"></i> Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-white border-t py-4 text-gray-700">
+    <div class="container mx-auto px-6 text-center text-sm">
+      &copy; {{ now|date:"Y" }} Nordhealth &middot; Handcrafted in the Nordics.
+    </div>
+  </footer>
+
+  <script>
+    const toggleBtn = document.getElementById('theme-toggle');
+    toggleBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>
